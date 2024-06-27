@@ -7,8 +7,11 @@ import {Lottery} from "../src/Lottery.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployLottery is Script {
-    function run() external returns (Lottery lottery) {
-        HelperConfig helperConfig = new HelperConfig();
+    function run()
+        external
+        returns (Lottery lottery, HelperConfig helperConfig)
+    {
+        helperConfig = new HelperConfig();
         (
             address vrfCoordinator,
             bytes32 gasLane,
@@ -29,6 +32,6 @@ contract DeployLottery is Script {
         );
         vm.stopBroadcast();
 
-        return lottery;
+        return (lottery, helperConfig);
     }
 }
