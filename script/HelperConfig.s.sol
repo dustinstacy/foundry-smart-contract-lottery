@@ -3,6 +3,7 @@
 pragma solidity ^0.8.18;
 
 import {Script} from "forge-std/Script.sol";
+import {VRFCoordinatorV2Mock} from "@chainlink/contracts/v0.8/mocks/VRFCoordinatorV2Mock.sol";
 
 contract HelperConfig is Script {
     struct NetworkConfig {
@@ -41,14 +42,24 @@ contract HelperConfig is Script {
 
     function getAnvilConfig()
         public
-        view
         returns (NetworkConfig memory anvilConfig)
     {
         if (activeNetworkConfig.vrfCoordinator != address(0)) {
             return activeNetworkConfig;
         }
+
+        uint96 baseFee = 0.25 ether;
+        uint96 gasPriceLink = 1e9;
+
+        vm.startBroadcast();
+        VRFCoordinatorV2Mock vrfCoordinatorV2mock = new VRFCoordinatorV2Mock(
+            baseFee,
+            gasPriceLink
+        );
+        vm.stopBroadcast();
+
         anvilConfig = NetworkConfig({
-            vrfCoordinator: address(0),
+            vrfCoordinator: address(vrfCoordinatorV2mock),
             gasLane: "",
             entranceFee: 1 ether,
             interval: 30,
