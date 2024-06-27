@@ -6,7 +6,12 @@ import {VRFCoordinatorV2Interface} from "@chainlink/contracts/v0.8/interfaces/VR
 import {VRFConsumerBaseV2} from "@chainlink/contracts/v0.8/VRFConsumerBaseV2.sol";
 
 error Lottery__NotEnoughEthSent();
-error Lottery__NotEnoughTimeHasPassed();
+error Lottery__UpkeepNotNeeded(
+    uint256 timeToNextDrawing,
+    uint256 state,
+    uint256 balance,
+    uint256 numEntrants
+);
 error Lottery__TransferFailed();
 error Lottery__LotteryNotOpen();
 
@@ -72,9 +77,31 @@ contract Lottery is VRFConsumerBaseV2 {
         emit LotteryEntered(msg.sender);
     }
 
-    function chooseWinner() external {
-        if ((block.timestamp - s_lastTimeStamp) < i_interval) {
-            revert Lottery__NotEnoughTimeHasPassed();
+    function checkUpkeep(
+        bytes memory /*checkData*/
+    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
+        bool enoughTimeHasPassed = (block.timestamp - s_lastTimeStamp) >=
+            i_interval;
+        bool isOpen = LotteryState.OPEN == s_lotteryState;
+        bool hasBalance = address(this).balance > 0;
+        bool hasEnoughEntrants = s_entrants.length > 0;
+        upkeepNeeded =
+            enoughTimeHasPassed &&
+            isOpen &&
+            hasBalance &&
+            hasEnoughEntrants;
+        return (upkeepNeeded, "0x0");
+    }
+
+    function performUpkeep(bytes calldata /*performData*/) external {
+        (bool upkeepNeeded, ) = checkUpkeep("");
+        if (!upkeepNeeded) {
+            revert Lottery__UpkeepNotNeeded(
+                i_interval - (block.timestamp - s_lastTimeStamp),
+                uint256(s_lotteryState),
+                address(this).balance,
+                s_entrants.length
+            );
         }
         s_lotteryState = LotteryState.CALCULATING;
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
