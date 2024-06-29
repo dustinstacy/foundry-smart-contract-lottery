@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.18;
 
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import {VRFConsumerBaseV2} from "@chainlink/contracts/v0.8/VRFConsumerBaseV2.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 
 error Lottery__NotEnoughEthSent();
 error Lottery__UpkeepNotNeeded(
@@ -21,7 +21,7 @@ error Lottery__LotteryNotOpen();
  * @notice This contract is for creating a sample lottery
  * @dev Implents Chainlink VRFv2
  */
-contract Lottery is VRFConsumerBaseV2 {
+contract Lottery is VRFConsumerBaseV2Plus {
     /** Type declarations **/
     enum LotteryState {
         OPEN,
@@ -32,7 +32,6 @@ contract Lottery is VRFConsumerBaseV2 {
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
-    VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     bytes32 private immutable i_gasLane;
     uint256 private immutable i_entranceFee;
     // @dev Duration of the lottery in seconds
@@ -55,8 +54,7 @@ contract Lottery is VRFConsumerBaseV2 {
         uint256 interval,
         uint64 subscriptionId,
         uint32 callbackGasLimit
-    ) VRFConsumerBaseV2(vrfCoordinator) {
-        i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator);
+    ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_gasLane = gasLane;
         i_interval = interval;
@@ -104,18 +102,24 @@ contract Lottery is VRFConsumerBaseV2 {
             );
         }
         s_lotteryState = LotteryState.CALCULATING;
-        uint256 requestId = i_vrfCoordinator.requestRandomWords(
-            i_gasLane, // gas lane
-            i_subscriptionId,
-            REQUEST_CONFIRMATIONS,
-            i_callbackGasLimit,
-            NUM_WORDS
-        );
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
+            .RandomWordsRequest({
+                keyHash: i_gasLane,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    // Set nativePayment to true to pay for VRF requests with Sepolia ETH instead of LINK
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
+            });
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
     }
 
     function fulfillRandomWords(
         uint256 requestId,
-        uint256[] memory randomWords
+        uint256[] calldata randomWords
     ) internal override {
         uint256 indexOfWinner = randomWords[0] % s_entrants.length;
         address payable winner = s_entrants[indexOfWinner];
