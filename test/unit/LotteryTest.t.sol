@@ -3,13 +3,13 @@
 pragma solidity ^0.8.18;
 
 import {DeployLottery} from "../../script/DeployLottery.sol";
-import {Lottery} from "../../src/Lottery.sol";
+import {Lottery} from "src/Lottery.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 contract LotteryTest is Test {
-    Lottery lottery;
-    HelperConfig helperConfig;
+    Lottery public lottery;
+    HelperConfig public helperConfig;
 
     address vrfCoordinator;
     bytes32 gasLane;
@@ -23,15 +23,15 @@ contract LotteryTest is Test {
 
     function setUp() external {
         DeployLottery deployer = new DeployLottery();
-        (lottery, helperConfig) = deployer.run();
-        (
-            vrfCoordinator,
-            gasLane,
-            entranceFee,
-            interval,
-            subscriptionId,
-            callbackGasLimit
-        ) = helperConfig.activeNetworkConfig();
+        (lottery, helperConfig) = deployer.deployContract();
+        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
+
+        vrfCoordinator = config.vrfCoordinator;
+        gasLane = config.gasLane;
+        entranceFee = config.entranceFee;
+        interval = config.interval;
+        subscriptionId = config.subscriptionId;
+        callbackGasLimit = config.callbackGasLimit;
     }
 
     function testLotteryInitializesInOpenState() public view {
