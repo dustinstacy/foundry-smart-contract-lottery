@@ -5,16 +5,6 @@ pragma solidity ^0.8.18;
 import {VRFV2PlusClient} from "@chainlink/contracts/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 
-error Lottery__NotEnoughEthSent();
-error Lottery__UpkeepNotNeeded(
-    uint256 timeToNextDrawing,
-    uint256 state,
-    uint256 balance,
-    uint256 numEntrants
-);
-error Lottery__TransferFailed();
-error Lottery__LotteryNotOpen();
-
 /**
  * @title A sample Lottery Contract
  * @author Dustin Stacy
@@ -22,6 +12,17 @@ error Lottery__LotteryNotOpen();
  * @dev Implents Chainlink VRFv2
  */
 contract Lottery is VRFConsumerBaseV2Plus {
+    /** Errors **/
+    error Lottery__NotEnoughEthSent();
+    error Lottery__UpkeepNotNeeded(
+        uint256 timeToNextDrawing,
+        uint256 state,
+        uint256 balance,
+        uint256 numEntrants
+    );
+    error Lottery__TransferFailed();
+    error Lottery__LotteryNotOpen();
+
     /** Type declarations **/
     enum LotteryState {
         OPEN,
@@ -32,7 +33,7 @@ contract Lottery is VRFConsumerBaseV2Plus {
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
-    bytes32 private immutable i_gasLane;
+    bytes32 private immutable i_keyHash;
     uint256 private immutable i_entranceFee;
     // @dev Duration of the lottery in seconds
     uint256 private immutable i_interval;
@@ -56,7 +57,7 @@ contract Lottery is VRFConsumerBaseV2Plus {
         uint32 callbackGasLimit
     ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
-        i_gasLane = gasLane;
+        i_keyHash = gasLane;
         i_interval = interval;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
@@ -104,7 +105,7 @@ contract Lottery is VRFConsumerBaseV2Plus {
         s_lotteryState = LotteryState.CALCULATING;
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
             .RandomWordsRequest({
-                keyHash: i_gasLane,
+                keyHash: i_keyHash,
                 subId: i_subscriptionId,
                 requestConfirmations: REQUEST_CONFIRMATIONS,
                 callbackGasLimit: i_callbackGasLimit,

@@ -3,9 +3,22 @@
 pragma solidity ^0.8.18;
 
 import {Script} from "forge-std/Script.sol";
-import {VRFCoordinatorV2Mock} from "@chainlink/contracts/v0.8/mocks/VRFCoordinatorV2Mock.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
-contract HelperConfig is Script {
+abstract contract CodeConstants {
+    /* VRF Mock Values*/
+    uint96 public constant MOCK_BASE_FEE = 0.25 ether;
+    uint96 public constant MOCK_GAS_PRICE_LINK = 1e9;
+    int256 public constant MOCK_WEI_PER_UNIT_LINK = 4e15;
+
+    /* Chain IDs */
+    uint256 public constant ETH_SEPOLIA_CHAIN_ID = 11155111;
+    uint256 public constant LOCAL_CHAIN_ID = 31337;
+}
+
+contract HelperConfig is CodeConstants, Script {
+    error HelperConfig__InvalidChainId();
+
     struct NetworkConfig {
         address vrfCoordinator;
         bytes32 gasLane;
@@ -15,50 +28,55 @@ contract HelperConfig is Script {
         uint32 callbackGasLimit;
     }
 
-    NetworkConfig public activeNetworkConfig;
+    NetworkConfig public localNetworkConfig;
+    mapping(uint256 chainId => NetworkConfig) public networkConfigs;
 
     constructor() {
-        if (block.chainid == 11155111) {
-            activeNetworkConfig = getSepoliaConfig();
+        networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getSepoliaConfig();
+    }
+
+    function getConfigByChainId(
+        uint256 chainId
+    ) public returns (NetworkConfig memory) {
+        if (networkConfigs[chainId].vrfCoordinator != address(0)) {
+            return networkConfigs[chainId];
+        } else if (chainId == LOCAL_CHAIN_ID) {
+            return getOrCreateAnvilConfig();
         } else {
-            activeNetworkConfig = getAnvilConfig();
+            revert HelperConfig__InvalidChainId();
         }
     }
 
-    function getSepoliaConfig()
-        public
-        pure
-        returns (NetworkConfig memory sepoliaConfig)
-    {
-        sepoliaConfig = NetworkConfig({
-            vrfCoordinator: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
-            gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
-            entranceFee: .01 ether,
-            interval: 60,
-            subscriptionId: 4673,
-            callbackGasLimit: 500000
-        });
+    function getConfig() public returns (NetworkConfig memory) {
+        return getConfigByChainId(block.chainid);
     }
 
-    function getAnvilConfig()
-        public
-        returns (NetworkConfig memory anvilConfig)
-    {
-        if (activeNetworkConfig.vrfCoordinator != address(0)) {
-            return activeNetworkConfig;
-        }
+    function getSepoliaConfig() public pure returns (NetworkConfig memory) {
+        return
+            NetworkConfig({
+                vrfCoordinator: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
+                gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
+                entranceFee: .01 ether,
+                interval: 30,
+                subscriptionId: 4673,
+                callbackGasLimit: 500000
+            });
+    }
 
-        uint96 baseFee = 0.25 ether;
-        uint96 gasPriceLink = 1e9;
+    function getOrCreateAnvilConfig() public returns (NetworkConfig memory) {
+        if (localNetworkConfig.vrfCoordinator != address(0)) {
+            return localNetworkConfig;
+        }
 
         vm.startBroadcast();
-        VRFCoordinatorV2Mock vrfCoordinatorV2mock = new VRFCoordinatorV2Mock(
-            baseFee,
-            gasPriceLink
-        );
+        VRFCoordinatorV2_5Mock vrfCoordinatorV2mock = new VRFCoordinatorV2_5Mock(
+                MOCK_BASE_FEE,
+                MOCK_GAS_PRICE_LINK,
+                MOCK_WEI_PER_UNIT_LINK
+            );
         vm.stopBroadcast();
 
-        anvilConfig = NetworkConfig({
+        localNetworkConfig = NetworkConfig({
             vrfCoordinator: address(vrfCoordinatorV2mock),
             gasLane: "",
             entranceFee: 1 ether,
@@ -66,5 +84,6 @@ contract HelperConfig is Script {
             subscriptionId: 0,
             callbackGasLimit: 500000
         });
+        return localNetworkConfig;
     }
 }

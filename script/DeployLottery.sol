@@ -7,28 +7,23 @@ import {Lottery} from "../src/Lottery.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployLottery is Script {
-    function run()
-        external
+    function run() public {}
+
+    function deployContract()
+        public
         returns (Lottery lottery, HelperConfig helperConfig)
     {
         helperConfig = new HelperConfig();
-        (
-            address vrfCoordinator,
-            bytes32 gasLane,
-            uint256 entranceFee,
-            uint256 interval,
-            uint64 subscriptionId,
-            uint32 callbackGasLimit
-        ) = helperConfig.activeNetworkConfig();
+        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
 
         vm.startBroadcast();
         lottery = new Lottery(
-            vrfCoordinator,
-            gasLane,
-            entranceFee,
-            interval,
-            subscriptionId,
-            callbackGasLimit
+            config.vrfCoordinator,
+            config.gasLane,
+            config.entranceFee,
+            config.interval,
+            config.subscriptionId,
+            config.callbackGasLimit
         );
         vm.stopBroadcast();
 
