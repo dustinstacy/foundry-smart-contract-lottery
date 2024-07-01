@@ -7,6 +7,7 @@ import {Lottery} from "src/Lottery.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract LotteryTest is Test {
     Lottery public lottery;
@@ -187,5 +188,20 @@ contract LotteryTest is Test {
         Lottery.LotteryState lotteryState = lottery.getLotteryState();
         assert(uint256(requestId) >= 0);
         assert(lotteryState == Lottery.LotteryState.CALCULATING);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          FULFILL RANDOM WORDS
+    //////////////////////////////////////////////////////////////*/
+
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(
+        uint256 randomRequestId
+    ) public lotteryEntered {
+        // Act / Assert
+        vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
+            randomRequestId,
+            address(lottery)
+        );
     }
 }
