@@ -37,7 +37,7 @@ contract Lottery is VRFConsumerBaseV2Plus {
     uint256 private immutable i_entranceFee;
     // @dev Duration of the lottery in seconds
     uint256 private immutable i_interval;
-    uint64 private immutable i_subscriptionId;
+    uint256 private immutable i_subscriptionId;
     uint32 private immutable i_callbackGasLimit;
 
     address payable[] private s_entrants;
@@ -53,7 +53,7 @@ contract Lottery is VRFConsumerBaseV2Plus {
         bytes32 gasLane,
         uint256 entranceFee,
         uint256 interval,
-        uint64 subscriptionId,
+        uint256 subscriptionId,
         uint32 callbackGasLimit
     ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
