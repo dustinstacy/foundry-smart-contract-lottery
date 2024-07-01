@@ -166,7 +166,7 @@ contract LotteryTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 Lottery.Lottery__UpkeepNotNeeded.selector,
-                interval,
+                interval - (block.timestamp - lottery.getLastTimeStamp()),
                 lotteryState,
                 currentBalance,
                 numEntrants
@@ -203,5 +203,49 @@ contract LotteryTest is Test {
             randomRequestId,
             address(lottery)
         );
+    }
+
+    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney()
+        public
+        lotteryEntered
+    {
+        // Arrange
+        uint256 additionalEntrants = 3; // 4 total
+        uint256 startingIndex = 1;
+        address expectedWinner = address(1);
+
+        for (
+            uint256 i = startingIndex;
+            i < startingIndex + additionalEntrants;
+            i++
+        ) {
+            address newEntrant = address(uint160(i));
+            hoax(newEntrant, 10 ether);
+            lottery.enterLottery{value: entranceFee}();
+        }
+        uint256 startingTimeStamp = lottery.getLastTimeStamp();
+        uint256 winnerStartingBalance = expectedWinner.balance;
+
+        // Act
+        vm.recordLogs();
+        lottery.performUpkeep("");
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 requestId = entries[1].topics[1];
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
+            uint256(requestId),
+            address(lottery)
+        );
+
+        // Assert
+        address recentWinner = lottery.getRecentWinner();
+        Lottery.LotteryState lotteryState = lottery.getLotteryState();
+        uint256 winnerBalance = recentWinner.balance;
+        uint256 endingTimeStamp = lottery.getLastTimeStamp();
+        uint256 prize = entranceFee * (additionalEntrants + 1);
+
+        assert(recentWinner == expectedWinner);
+        assert(uint256(lotteryState) == 0);
+        assert(winnerBalance == winnerStartingBalance + prize);
+        assert(endingTimeStamp > startingTimeStamp);
     }
 }
