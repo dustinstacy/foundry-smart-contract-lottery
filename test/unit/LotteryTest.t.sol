@@ -15,7 +15,7 @@ contract LotteryTest is Test {
     bytes32 gasLane;
     uint256 entranceFee;
     uint256 interval;
-    uint64 subscriptionId;
+    uint256 subscriptionId;
     uint32 callbackGasLimit;
 
     address public ENTRANT = makeAddr("entrant");
