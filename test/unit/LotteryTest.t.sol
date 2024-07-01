@@ -21,6 +21,9 @@ contract LotteryTest is Test {
     address public ENTRANT = makeAddr("entrant");
     uint256 public constant STARTING_ENTRANT_BALANCE = 10 ether;
 
+    event LotteryEntered(address indexed entrant);
+    event WinnerPicked(address indexed winner);
+
     function setUp() external {
         DeployLottery deployer = new DeployLottery();
         (lottery, helperConfig) = deployer.deployContract();
@@ -40,7 +43,7 @@ contract LotteryTest is Test {
         assert(lottery.getLotteryState() == Lottery.LotteryState.OPEN);
     }
 
-    function testLotteryRevertsWhenYouDontPayEnough() public {
+    function testEnterLotteryRevertsWhenYouDontPayEnough() public {
         //Arrange
         vm.prank(ENTRANT);
         //Act / Assert
@@ -48,10 +51,36 @@ contract LotteryTest is Test {
         lottery.enterLottery();
     }
 
-    function testLotteryRecordsEntrantsWhenTheyEnter() public {
+    function testEnterLotteryRevertsWhenLotteryIsCalculating() public {
+        // Arrange
+        vm.prank(ENTRANT);
+        // Act
+        lottery.enterLottery{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        lottery.performUpkeep("");
+        // Assert
+        vm.expectRevert(Lottery.Lottery__LotteryNotOpen.selector);
         vm.prank(ENTRANT);
         lottery.enterLottery{value: entranceFee}();
+    }
+
+    function testEnterLotteryRecordsEntrantsWhenTheyEnter() public {
+        //Arrange
+        vm.prank(ENTRANT);
+        //Act
+        lottery.enterLottery{value: entranceFee}();
         address entrantRecorded = lottery.getEntrant(0);
+        //Assert
         assert(entrantRecorded == ENTRANT);
+    }
+
+    function testLotteryEnteredEventEmits() public {
+        // Arrange
+        vm.prank(ENTRANT);
+        // Act / Assert
+        vm.expectEmit(true, false, false, false, address(lottery));
+        emit LotteryEntered(ENTRANT);
+        lottery.enterLottery{value: entranceFee}();
     }
 }
