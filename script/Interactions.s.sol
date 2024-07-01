@@ -8,17 +8,6 @@ import {LinkToken} from "test/mocks/LinkToken.sol";
 import {DevOpsTools} from "@foundry-devops/DevOpsTools.sol";
 
 contract CreateSubscription is Script {
-    function createSubscriptionUsingConfig()
-        public
-        returns (uint256 subId, address vrfCoordinator)
-    {
-        HelperConfig helperConfig = new HelperConfig();
-        vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
-        address account = helperConfig.getConfig().account;
-        (subId, ) = createSubscription(vrfCoordinator, account);
-        return (subId, vrfCoordinator);
-    }
-
     function createSubscription(
         address vrfCoordinator,
         address account
@@ -35,6 +24,17 @@ contract CreateSubscription is Script {
         return (subId, vrfCoordinator);
     }
 
+    function createSubscriptionUsingConfig()
+        public
+        returns (uint256 subId, address vrfCoordinator)
+    {
+        HelperConfig helperConfig = new HelperConfig();
+        vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
+        address account = helperConfig.getConfig().account;
+        (subId, ) = createSubscription(vrfCoordinator, account);
+        return (subId, vrfCoordinator);
+    }
+
     function run() external {
         createSubscriptionUsingConfig();
     }
@@ -42,16 +42,6 @@ contract CreateSubscription is Script {
 
 contract FundSubscription is Script, CodeConstants {
     uint256 public constant FUND_AMOUNT = 3 ether; //3 LINK
-
-    function fundSubscriptionUsingConfig() public {
-        HelperConfig helperConfig = new HelperConfig();
-        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
-        uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
-        address linkToken = helperConfig.getConfig().link;
-        address account = helperConfig.getConfig().account;
-
-        fundSubscription(vrfCoordinator, subscriptionId, linkToken, account);
-    }
 
     function fundSubscription(
         address vrfCoordinator,
@@ -82,26 +72,22 @@ contract FundSubscription is Script, CodeConstants {
         }
     }
 
+    function fundSubscriptionUsingConfig() public {
+        HelperConfig helperConfig = new HelperConfig();
+        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
+        uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
+        address linkToken = helperConfig.getConfig().link;
+        address account = helperConfig.getConfig().account;
+
+        fundSubscription(vrfCoordinator, subscriptionId, linkToken, account);
+    }
+
     function run() external {
         fundSubscriptionUsingConfig();
     }
 }
 
 contract AddConsumer is Script {
-    function addConsumerUsingConfig(address mostRecentlyDeployed) public {
-        HelperConfig helperConfig = new HelperConfig();
-        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
-        uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
-        address account = helperConfig.getConfig().account;
-
-        addConsumer(
-            mostRecentlyDeployed,
-            vrfCoordinator,
-            subscriptionId,
-            account
-        );
-    }
-
     function addConsumer(
         address contractToAddToVrf,
         address vrfCoordinator,
@@ -117,6 +103,20 @@ contract AddConsumer is Script {
             contractToAddToVrf
         );
         vm.stopBroadcast();
+    }
+
+    function addConsumerUsingConfig(address mostRecentlyDeployed) public {
+        HelperConfig helperConfig = new HelperConfig();
+        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
+        uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
+        address account = helperConfig.getConfig().account;
+
+        addConsumer(
+            mostRecentlyDeployed,
+            vrfCoordinator,
+            subscriptionId,
+            account
+        );
     }
 
     function run() external {
