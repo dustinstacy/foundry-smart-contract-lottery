@@ -47,6 +47,7 @@ contract Lottery is VRFConsumerBaseV2Plus {
 
     event LotteryEntered(address indexed entrant);
     event WinnerPicked(address indexed winner);
+    event RequestedLotteryWinner(uint256 indexed requestId);
 
     constructor(
         address vrfCoordinator,
@@ -116,6 +117,8 @@ contract Lottery is VRFConsumerBaseV2Plus {
                 )
             });
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        // Redundant
+        emit RequestedLotteryWinner(requestId);
     }
 
     function fulfillRandomWords(

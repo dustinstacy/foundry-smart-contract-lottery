@@ -6,6 +6,7 @@ import {DeployLottery} from "../../script/DeployLottery.sol";
 import {Lottery} from "src/Lottery.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 contract LotteryTest is Test {
     Lottery public lottery;
@@ -23,6 +24,14 @@ contract LotteryTest is Test {
 
     event LotteryEntered(address indexed entrant);
     event WinnerPicked(address indexed winner);
+
+    modifier lotteryEntered() {
+        vm.prank(ENTRANT);
+        lottery.enterLottery{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        _;
+    }
 
     function setUp() external {
         DeployLottery deployer = new DeployLottery();
@@ -74,12 +83,11 @@ contract LotteryTest is Test {
         lottery.enterLottery{value: entranceFee}();
     }
 
-    function testEnterLotteryRevertsWhenLotteryIsCalculating() public {
+    function testEnterLotteryRevertsWhenLotteryIsCalculating()
+        public
+        lotteryEntered
+    {
         // Arrange
-        vm.prank(ENTRANT);
-        lottery.enterLottery{value: entranceFee}();
-        vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
         lottery.performUpkeep("");
         // Act / Assert
         vm.expectRevert(Lottery.Lottery__LotteryNotOpen.selector);
@@ -101,12 +109,11 @@ contract LotteryTest is Test {
         assert(!upkeepNeeded);
     }
 
-    function testCheckUpkeepReturnsFalseIfLotteryCalculating() public {
+    function testCheckUpkeepReturnsFalseIfLotteryCalculating()
+        public
+        lotteryEntered
+    {
         // Arrange
-        vm.prank(ENTRANT);
-        lottery.enterLottery{value: entranceFee}();
-        vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
         lottery.performUpkeep("");
         Lottery.LotteryState lotteryState = lottery.getLotteryState();
         // Act
@@ -126,12 +133,10 @@ contract LotteryTest is Test {
         assert(!upkeepNeeded);
     }
 
-    function testCheckUpkeepReturnsTrueWhenParametersAreGood() public {
-        // Arrange
-        vm.prank(ENTRANT);
-        lottery.enterLottery{value: entranceFee}();
-        vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
+    function testCheckUpkeepReturnsTrueWhenParametersAreGood()
+        public
+        lotteryEntered
+    {
         // Act
         (bool upkeepNeeded, ) = lottery.checkUpkeep("");
         // Assert
@@ -142,12 +147,10 @@ contract LotteryTest is Test {
                              PERFORM UPKEEP
     //////////////////////////////////////////////////////////////*/
 
-    function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() public {
-        // Arrange
-        vm.prank(ENTRANT);
-        lottery.enterLottery{value: entranceFee}();
-        vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
+    function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue()
+        public
+        lotteryEntered
+    {
         // Act / Assert
         lottery.performUpkeep("");
     }
@@ -169,5 +172,20 @@ contract LotteryTest is Test {
             )
         );
         lottery.performUpkeep("");
+    }
+
+    function testPerformUpkeepUpdatesLotteryStateAndEmitsRequestId()
+        public
+        lotteryEntered
+    {
+        // Act
+        vm.recordLogs();
+        lottery.performUpkeep("");
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 requestId = entries[1].topics[1];
+        // Assert
+        Lottery.LotteryState lotteryState = lottery.getLotteryState();
+        assert(uint256(requestId) >= 0);
+        assert(lotteryState == Lottery.LotteryState.CALCULATING);
     }
 }
