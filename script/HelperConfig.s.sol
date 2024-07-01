@@ -14,7 +14,11 @@ abstract contract CodeConstants {
 
     /* Chain IDs */
     uint256 public constant ETH_SEPOLIA_CHAIN_ID = 11155111;
-    uint256 public constant LOCAL_CHAIN_ID = 31337;
+    uint256 public LOCAL_CHAIN_ID = 31337;
+
+    /* Addresses */
+    address public FOUNDRY_DEFAULT_SENDER =
+        address(uint160(uint256(keccak256("foundry default caller"))));
 }
 
 contract HelperConfig is CodeConstants, Script {
@@ -28,6 +32,7 @@ contract HelperConfig is CodeConstants, Script {
         uint256 subscriptionId;
         uint32 callbackGasLimit;
         address link;
+        address account;
     }
 
     NetworkConfig public localNetworkConfig;
@@ -65,7 +70,8 @@ contract HelperConfig is CodeConstants, Script {
             interval: 30,
             subscriptionId: 71725738945960816049416707497509543650198980936444466996181323752735771573462,
             callbackGasLimit: 500000,
-            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789
+            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            account: 0x3ef270a74CaAe5Ca4b740a66497085abBf236655
         });
     }
 
@@ -90,7 +96,8 @@ contract HelperConfig is CodeConstants, Script {
             interval: 30,
             subscriptionId: 0,
             callbackGasLimit: 500000,
-            link: address(linkToken)
+            link: address(linkToken),
+            account: FOUNDRY_DEFAULT_SENDER
         });
         return localNetworkConfig;
     }

@@ -5,11 +5,11 @@ pragma solidity ^0.8.18;
 import {DeployLottery} from "../../script/DeployLottery.sol";
 import {Lottery} from "src/Lottery.sol";
 import {Test, console} from "forge-std/Test.sol";
-import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {HelperConfig, CodeConstants} from "../../script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
-contract LotteryTest is Test {
+contract LotteryTest is Test, CodeConstants {
     Lottery public lottery;
     HelperConfig public helperConfig;
 
@@ -194,9 +194,16 @@ contract LotteryTest is Test {
                           FULFILL RANDOM WORDS
     //////////////////////////////////////////////////////////////*/
 
+    modifier skipFork() {
+        if (block.chainid != LOCAL_CHAIN_ID) {
+            return;
+        }
+        _;
+    }
+
     function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(
         uint256 randomRequestId
-    ) public lotteryEntered {
+    ) public lotteryEntered skipFork {
         // Act / Assert
         vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
@@ -208,6 +215,7 @@ contract LotteryTest is Test {
     function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney()
         public
         lotteryEntered
+        skipFork
     {
         // Arrange
         uint256 additionalEntrants = 3; // 4 total
