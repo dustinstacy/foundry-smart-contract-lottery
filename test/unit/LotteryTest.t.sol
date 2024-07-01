@@ -43,10 +43,14 @@ contract LotteryTest is Test {
         assert(lottery.getLotteryState() == Lottery.LotteryState.OPEN);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                             ENTER LOTTERY
+    //////////////////////////////////////////////////////////////*/
+
     function testEnterLotteryRevertsWhenYouDontPayEnough() public {
-        //Arrange
+        // Arrange
         vm.prank(ENTRANT);
-        //Act / Assert
+        // Act / Assert
         vm.expectRevert(Lottery.Lottery__NotEnoughEthSent.selector);
         lottery.enterLottery();
     }
@@ -54,24 +58,23 @@ contract LotteryTest is Test {
     function testEnterLotteryRevertsWhenLotteryIsCalculating() public {
         // Arrange
         vm.prank(ENTRANT);
-        // Act
         lottery.enterLottery{value: entranceFee}();
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
         lottery.performUpkeep("");
-        // Assert
+        // Act / Assert
         vm.expectRevert(Lottery.Lottery__LotteryNotOpen.selector);
         vm.prank(ENTRANT);
         lottery.enterLottery{value: entranceFee}();
     }
 
     function testEnterLotteryRecordsEntrantsWhenTheyEnter() public {
-        //Arrange
+        // Arrange
         vm.prank(ENTRANT);
-        //Act
         lottery.enterLottery{value: entranceFee}();
+        // Act
         address entrantRecorded = lottery.getEntrant(0);
-        //Assert
+        // Act /Assert
         assert(entrantRecorded == ENTRANT);
     }
 
@@ -82,5 +85,57 @@ contract LotteryTest is Test {
         vm.expectEmit(true, false, false, false, address(lottery));
         emit LotteryEntered(ENTRANT);
         lottery.enterLottery{value: entranceFee}();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              CHECK UPKEEP
+    //////////////////////////////////////////////////////////////*/
+
+    function testCheckUpkeepReturnsFalseIfHasNoEntrants() public {
+        // Arrange
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        // Act
+        (bool upkeepNeeded, ) = lottery.checkUpkeep("");
+        // Assert
+        assert(!upkeepNeeded);
+    }
+
+    function testCheckUpkeepReturnsFalseIfLotteryCalculating() public {
+        // Arrange
+        vm.prank(ENTRANT);
+        lottery.enterLottery{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        lottery.performUpkeep("");
+        Lottery.LotteryState lotteryState = lottery.getLotteryState();
+
+        // Act
+        (bool upkeepNeeded, ) = lottery.checkUpkeep("");
+        // Assert
+        assert(lotteryState == Lottery.LotteryState.CALCULATING);
+        assert(!upkeepNeeded);
+    }
+
+    function testCheckUpkeepReturnsFalseIfNotEnoughTimeHasPassed() public {
+        vm.prank(ENTRANT);
+        lottery.enterLottery{value: entranceFee}();
+
+        // Act
+        (bool upkeepNeeded, ) = lottery.checkUpkeep("");
+        // Assert
+        assert(!upkeepNeeded);
+    }
+
+    function testCheckUpkeepReturnsTrueWhenParametersAreGood() public {
+        vm.prank(ENTRANT);
+        lottery.enterLottery{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+
+        // Act
+        (bool upkeepNeeded, ) = lottery.checkUpkeep("");
+        // Assert
+        assert(upkeepNeeded);
     }
 }
