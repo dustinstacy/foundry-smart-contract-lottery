@@ -17,5 +17,9 @@ docs/
 # Library files
 lib/
 lib
+.gitmodules
+
+
 # Coverage reports
 coverage.txt
+
