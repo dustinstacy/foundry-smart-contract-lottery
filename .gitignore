@@ -16,6 +16,6 @@ docs/
 
 # Library files
 lib/
-
+lib
 # Coverage reports
 coverage.txt
