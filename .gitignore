@@ -19,7 +19,10 @@ lib/
 lib
 .gitmodules
 
-
 # Coverage reports
 coverage.txt
+
+# Misc
+Json.json
+.vscode
 
