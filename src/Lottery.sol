@@ -125,6 +125,10 @@ contract Lottery is VRFConsumerBaseV2Plus {
         uint256 /* requestId */,
         uint256[] calldata randomWords
     ) internal override {
+        pickWinner(randomWords);
+    }
+
+    function pickWinner(uint256[] calldata randomWords) private {
         uint256 indexOfWinner = randomWords[0] % s_entrants.length;
         address payable winner = s_entrants[indexOfWinner];
 

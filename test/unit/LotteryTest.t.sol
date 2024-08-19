@@ -4,10 +4,11 @@ pragma solidity ^0.8.18;
 
 import {DeployLottery} from "../../script/DeployLottery.sol";
 import {Lottery} from "src/Lottery.sol";
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {HelperConfig, CodeConstants} from "../../script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {console} from "forge-std/Script.sol";
 
 contract LotteryTest is Test, CodeConstants {
     Lottery public lottery;
@@ -239,6 +240,7 @@ contract LotteryTest is Test, CodeConstants {
         lottery.performUpkeep("");
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 requestId = entries[1].topics[1];
+
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
             uint256(requestId),
             address(lottery)
@@ -255,5 +257,6 @@ contract LotteryTest is Test, CodeConstants {
         assert(uint256(lotteryState) == 0);
         assert(winnerBalance == winnerStartingBalance + prize);
         assert(endingTimeStamp > startingTimeStamp);
+        console.log(uint256(requestId));
     }
 }

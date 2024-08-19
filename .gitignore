@@ -23,6 +23,6 @@ lib
 coverage.txt
 
 # Misc
-Json.json
+json.json
 .vscode
 
